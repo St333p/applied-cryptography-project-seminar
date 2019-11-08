@@ -5,6 +5,7 @@ from bitarray import bitarray
 from random import randint
 from time import time
 from dateutil.relativedelta import relativedelta as rd
+from utils import cyclic_bitarray
 fmt = '{0.minutes} m, {0.seconds} s'
 
 # a nice example prime: 492876863
