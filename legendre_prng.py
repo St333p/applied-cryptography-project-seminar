@@ -63,6 +63,7 @@ def bf_v1(p: int, hint, par=0.1)-> int:
                 return key % p
         k += 2 * int(len(hint) / par)
 
+# TODO: debug v2 since it doesn't always get the key
 def bf_v2(p: int, hint)-> int:
     """
     improvement: x10 speedup over v1
@@ -84,20 +85,19 @@ def bf_v2(p: int, hint)-> int:
             c = prev + blocklen
         else:
             c = min(candidates)
+        if time() - t > 20:
+            t = time()
+            print(c)
+            return
         candidates.update(range(blocklen + prev, blocklen + c))
-        calc_syms.shift(c - prev)
         for i in range(blocklen):
             next_index = c + blocklen - i
-            if calc_syms.get(next_index - c - 1):
-                counter_rep += 1
-                continue
-            calc_syms.set(next_index - c - 1, True)
             counter_sym += 1
             med_len = med_len + len(candidates)
             symbol = legendre(next_index, p)
             t1 = time()
             # workaround a "set changed size during iteration" RuntimeError
-            for k in list(candidates):
+            for k in sorted(list(candidates)):
                 rel_index = k - c + i
                 if rel_index > blocklen:
                     continue 
@@ -131,30 +131,24 @@ def bf_v3(p: int, hint)-> int:
         offset = candidates.first(True)
         # print("offset " + str(offset))
         c += offset
-        # print(c)
+        if time() - t > 20:
+            t = time()
+            print(c)
         candidates.shift(offset)
         calc_syms.shift(offset)
         for i in range(blocklen):
             to_calc_offset = blocklen - i - 1
-            if calc_syms.get(to_calc_offset):
-                counter_rep += 1
-                continue
-            calc_syms.set(to_calc_offset, True)
             counter_sym += 1
             symbol = legendre(c + to_calc_offset, p)
             t1 = time()
+            # mod represents a vector containing the values of hint[j] == symbol
+            # ordered compatibly with candidates
             if not symbol:
                 mod = hint[-(i + 1): -(blocklen + 1): -1] ^ bitarray(repeat(1, blocklen - i))
             else:
                 mod = hint[-(i + 1): -(blocklen + 1): -1]
             candidates.bitwise_and(mod)
             inner += time() - t1
-            #for k in range(blocklen - i):
-            #    if not candidates.get(k):
-            #        continue
-            #    rel_index = k + i + 1
-            #    if symbol != hint[-rel_index]:
-            #        candidates.set(k, False)
             if not candidates.get(0):
                  break
         if candidates.get(0):
@@ -163,7 +157,7 @@ def bf_v3(p: int, hint)-> int:
             print("inner cycle avg time = " + str(inner / counter_sym))
             return c
 
-def bruteforce(security_bits, key=None, version=None, stream_length=10**5):
+def bruteforce(security_bits, stream_length, key=None, version=None):
     """
     bruteforce a legendre prng stream generated with a prime p of given security bits
     if key is not specified it's generated randomly in {0, ..., p-1}
@@ -177,13 +171,13 @@ def bruteforce(security_bits, key=None, version=None, stream_length=10**5):
     hint = prng(key, 0, p, stream_length)
     print("hint derivation time: " + fmt.format(rd(seconds=time()-t)))
     t = time()
-    result = bf_v2(p, hint)
-    assert key == result, "wrong result, please debug"
-    print("bruteforce v2 execution time: " + fmt.format(rd(seconds=time() - t)))
-    t = time()
     result = bf_v3(p, hint)
     assert key == result, "wrong result, please debug"
     print("bruteforce v3 execution time: " + fmt.format(rd(seconds=time() - t)))
+    t = time()
+    result = bf_v2(p, hint)
+    assert key == result, "wrong result, please debug"
+    print("bruteforce v2 execution time: " + fmt.format(rd(seconds=time() - t)))
     return result
 
 if __name__ == "__main__":
@@ -195,6 +189,6 @@ if __name__ == "__main__":
             help='bitlength of the stream passed as hint for the bruteforce')
     args = parser.parse_args()
 
-    bruteforce(args.security_bits, stream_length=args.stream_length)
+    bruteforce(args.security_bits, args.stream_length)
 
 
