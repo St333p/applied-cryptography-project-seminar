@@ -3,46 +3,19 @@ from typing import *
 from sympy.ntheory import isprime, factorint
 from sympy import randprime, legendre_symbol, jacobi_symbol
 from bitarray import bitarray
+import gmpy2
 from random import randint
 from time import time
+from itertools import repeat
 from dateutil.relativedelta import relativedelta as rd
 from utils import cyclic_bitarray
+import argparse
 fmt = '{0.minutes} m, {0.seconds} s'
 
 def legendre(a: int, p: int) -> int:
     # assert isprime(p) and p > 2, "ERROR: p has to be an odd prime"
-    #return _legendre(a, p) == 1
-    return jacobi_symbol(a,p) == 1
-
-def _legendre(a: int, p: int) -> int:
-    """
-    computes the legendre symbol of a mod p where p is an odd prime,
-    algorithm taken from https://martin-thoma.com/how-to-calculate-the-legendre-symbol/
-    """
-    # try to speed this up using jacobi symbol or fast expenentiation 
-    # then try to implemented in C using gmp / boost (it contains legendre and jacobi symbols)
-    if a > p or a < 0:
-        return _legendre(a % p, p)
-    elif a in [0, 1]:
-        return a
-    elif a == 2:
-        if p % 8 in [-1, 1]:
-            return 1
-        else:
-            return -1
-    elif a == p - 1:
-        if p % 4 == 1:
-            return 1
-        else:
-            return -1
-    elif not isprime(a):
-        facs = factorint(a)
-        return np.prod(np.array([_legendre(f,p) ** facs[f] for f in facs.keys()]))
-    else:
-        if p % 4 == 1 or a % 4 == 1:
-            return _legendre(p,a)
-        else:
-            return - _legendre(p,a)
+    # return legendre_symbol(a, p) == 1
+    return gmpy2.legendre(a,p) == 1
 
 def prng(key: int, seed: int, p: int, length: int) -> bitarray:
     # assert that n is not too large (10 * log2^10(p) ?!?)
@@ -103,6 +76,8 @@ def bf_v2(p: int, hint)-> int:
     c = 0
     candidates = set(range(blocklen))
     print("bruteforcing with version 2...")
+    med_len = 0
+    avg_inner_time = 0
     while True:
         prev = c
         if candidates == set():
@@ -118,19 +93,24 @@ def bf_v2(p: int, hint)-> int:
                 continue
             calc_syms.set(next_index - c - 1, True)
             counter_sym += 1
+            med_len = med_len + len(candidates)
             symbol = legendre(next_index, p)
+            t1 = time()
             # workaround a "set changed size during iteration" RuntimeError
-            for k in candidates.copy():
+            for k in list(candidates):
                 rel_index = k - c + i
                 if rel_index > blocklen:
-                    break
+                    continue 
                 if symbol != hint[-rel_index]:
                     candidates.remove(k)
+            avg_inner_time += time() - t1
             if c not in candidates:
                 break
         if c in candidates:
             print("total number of symbol calulations = " + str(counter_sym))
             print("skipped redundant symbol calulations = " + str(counter_rep))
+            print("average length of candidates: " + str(med_len / counter_sym))
+            print("average inner cycle time: " + str(avg_inner_time / counter_sym))
             return c
 
 def bf_v3(p: int, hint)-> int:
@@ -145,6 +125,7 @@ def bf_v3(p: int, hint)-> int:
     candidates = cyclic_bitarray(blocklen, True)
     t = time()
     c = 0
+    inner = 0
     print("bruteforcing with version 3...")
     while True:
         offset = candidates.first(True)
@@ -160,18 +141,26 @@ def bf_v3(p: int, hint)-> int:
                 continue
             calc_syms.set(to_calc_offset, True)
             counter_sym += 1
-            symbol = legendre_symbol(c + to_calc_offset, p)
-            for k in range(blocklen - i):
-                if not candidates.get(k):
-                    continue
-                rel_index = k + i + 1
-                if symbol != hint[-rel_index]:
-                    candidates.set(k, False)
+            symbol = legendre(c + to_calc_offset, p)
+            t1 = time()
+            if not symbol:
+                mod = hint[-(i + 1): -(blocklen + 1): -1] ^ bitarray(repeat(1, blocklen - i))
+            else:
+                mod = hint[-(i + 1): -(blocklen + 1): -1]
+            candidates.bitwise_and(mod)
+            inner += time() - t1
+            #for k in range(blocklen - i):
+            #    if not candidates.get(k):
+            #        continue
+            #    rel_index = k + i + 1
+            #    if symbol != hint[-rel_index]:
+            #        candidates.set(k, False)
             if not candidates.get(0):
-                break
+                 break
         if candidates.get(0):
             print("total number of symbol calulations = " + str(counter_sym))
             print("skipped redundant symbol calulations = " + str(counter_rep))
+            print("inner cycle avg time = " + str(inner / counter_sym))
             return c
 
 def bruteforce(security_bits, key=None, version=None, stream_length=10**5):
@@ -189,13 +178,23 @@ def bruteforce(security_bits, key=None, version=None, stream_length=10**5):
     print("hint derivation time: " + fmt.format(rd(seconds=time()-t)))
     t = time()
     result = bf_v2(p, hint)
-    print("bruteforce execution time: " + fmt.format(rd(seconds=time() - t)))
-    print("result: " + str(result))
     assert key == result, "wrong result, please debug"
+    print("bruteforce v2 execution time: " + fmt.format(rd(seconds=time() - t)))
+    t = time()
+    result = bf_v3(p, hint)
+    assert key == result, "wrong result, please debug"
+    print("bruteforce v3 execution time: " + fmt.format(rd(seconds=time() - t)))
     return result
 
 if __name__ == "__main__":
     # target prime size ~40 bits, first prize at ~80 bits
-    bruteforce(23, stream_length=10**5)
+    parser = argparse.ArgumentParser(description='Bruteforce the legendre prng.')
+    parser.add_argument('security_bits', type=int,
+            help='bitlength of the prime number and the key')
+    parser.add_argument('stream_length', type=int,
+            help='bitlength of the stream passed as hint for the bruteforce')
+    args = parser.parse_args()
+
+    bruteforce(args.security_bits, stream_length=args.stream_length)
 
 
