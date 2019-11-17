@@ -15,15 +15,6 @@ class cyclic_bitarray:
     def get(self, index: int) -> bool:
         return self.array[(self.index + index) % self.length]
     
-    def get_sub(self, a:int, b:int) -> bitarray:
-        target = (a + self.index) % self.length
-        l = b - a
-        if target + l < self.length:
-            return self.array[target: target + l].copy()
-        else:
-            exceeding = (target + l) % self.length
-            return self.array[target:].copy().extend(self.array[:exceeding])
-
     def set(self, a: int, replacement):
         # check consistency of inputs?
         if a < 0 or a >= self.length:
@@ -59,10 +50,21 @@ class cyclic_bitarray:
             self.array[:exceeding] &= stream[-exceeding:]
     
     def first(self, value: bool)-> int:
-        for i in range(self.length):
-            if self.get(i) == value:
-                return i
-        return self.length 
+        '''
+        return the index of the first occurence of value in the array
+        '''
+        try:
+            return self.array.index(value, self.index) - self.index
+        except ValueError:
+            try:
+                return self.array.index(value, 0, self.index) - self.index + self.length
+            except ValueError:
+                return self.length
+        # this is an efficient implementation of the following desired syntax
+        #for i in range(self.length):
+        #    if self.get(i) == value:
+        #        return i
+        #return self.length 
     
     def __str__(self):
         return 'cyclic_' + str(self.array[self.index:] + self.array[:self.index])

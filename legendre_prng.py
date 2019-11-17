@@ -63,7 +63,6 @@ def bf_v1(p: int, hint, par=0.1)-> int:
                 return key % p
         k += 2 * int(len(hint) / par)
 
-# TODO: debug v2 since it doesn't always get the key
 def bf_v2(p: int, hint)-> int:
     """
     improvement: x10 speedup over v1
@@ -88,7 +87,6 @@ def bf_v2(p: int, hint)-> int:
         if time() - t > 20:
             t = time()
             print(c)
-            return
         candidates.update(range(blocklen + prev, blocklen + c))
         for i in range(blocklen):
             next_index = c + blocklen - i
@@ -99,6 +97,8 @@ def bf_v2(p: int, hint)-> int:
             # workaround a "set changed size during iteration" RuntimeError
             for k in sorted(list(candidates)):
                 rel_index = k - c + i
+                if rel_index == 0:
+                    continue
                 if rel_index > blocklen:
                     continue 
                 if symbol != hint[-rel_index]:
@@ -108,34 +108,36 @@ def bf_v2(p: int, hint)-> int:
                 break
         if c in candidates:
             print("total number of symbol calulations = " + str(counter_sym))
-            print("skipped redundant symbol calulations = " + str(counter_rep))
             print("average length of candidates: " + str(med_len / counter_sym))
             print("average inner cycle time: " + str(avg_inner_time / counter_sym))
             return c
 
+# bitwise operations on int are significantly faster thano on bitarrays: shall we switch?
 def bf_v3(p: int, hint)-> int:
     """
     potential improvement: optimize internal data structures and memory access
-    as of now waay worse
+    as of now ~2x speedup 
     """
     blocklen = len(hint)
     counter_sym = 0
-    counter_rep = 0
-    calc_syms = cyclic_bitarray(blocklen, False)
     candidates = cyclic_bitarray(blocklen, True)
     t = time()
     c = 0
-    inner = 0
+    inner_time = 0
+    shifts_time = 0
+    first_time = 0
     print("bruteforcing with version 3...")
     while True:
+        t1 = time()
         offset = candidates.first(True)
+        first_time += time() - t1
         # print("offset " + str(offset))
         c += offset
         if time() - t > 20:
             t = time()
             print(c)
+        t2 = time()
         candidates.shift(offset)
-        calc_syms.shift(offset)
         for i in range(blocklen):
             to_calc_offset = blocklen - i - 1
             counter_sym += 1
@@ -143,29 +145,32 @@ def bf_v3(p: int, hint)-> int:
             t1 = time()
             # mod represents a vector containing the values of hint[j] == symbol
             # ordered compatibly with candidates
-            if not symbol:
-                mod = hint[-(i + 1): -(blocklen + 1): -1] ^ bitarray(repeat(1, blocklen - i))
-            else:
+            if symbol:
                 mod = hint[-(i + 1): -(blocklen + 1): -1]
+            else:
+                mod = ~hint[-(i + 1): -(blocklen + 1): -1] 
             candidates.bitwise_and(mod)
-            inner += time() - t1
+            inner_time += time() - t1
             if not candidates.get(0):
                  break
+        shifts_time += time() - t2
         if candidates.get(0):
             print("total number of symbol calulations = " + str(counter_sym))
-            print("skipped redundant symbol calulations = " + str(counter_rep))
-            print("inner cycle avg time = " + str(inner / counter_sym))
+            print("inner cycle summed time = " + fmt.format(rd(seconds=inner_time)))
+            print("large internal cycle summed time = " + fmt.format(rd(seconds=shifts_time)))
             return c
 
-def bruteforce(security_bits, stream_length, key=None, version=None):
-    """
+# TODO: pass bf version as parameter
+def bruteforce(security_bits, stream_length, key=None, p=None):
+    """ 
     bruteforce a legendre prng stream generated with a prime p of given security bits
     if key is not specified it's generated randomly in {0, ..., p-1}
     uses the latest version of the bf function if none specified
     """
-    p = randprime(2**security_bits, 2**(security_bits + 1))
+    if not p:
+        p = randprime(2**security_bits, 2**(security_bits + 1))
     if not key:
-        key = randint(0, p)
+        key = randint(p // 2, p)
     print('key: ' + str(key) + ", p: " + str(p))
     t = time()
     hint = prng(key, 0, p, stream_length)
