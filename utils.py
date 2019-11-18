@@ -1,15 +1,19 @@
 from bitarray import bitarray
 from typing import *
+from time import time
 
 class cyclic_bitarray:
     """
     this offers a x1000 speedup in shifting sequence compared to the 
     naive same operation on bitarrays
     """
-    def __init__(self, length: int, default: bool=False):
+    def __init__(self, length: int, default: bool=False, random=False):
         self.length = length
         self.default = default
-        self.array = bitarray([self.default] * self.length)
+        if random:
+            self.array = bitarray(length)
+        else:
+            self.array = bitarray([self.default] * self.length)
         self.index = 0
 
     def get(self, index: int) -> bool:
@@ -40,15 +44,20 @@ class cyclic_bitarray:
         self.index = (self.index + steps) % self.length
     
     def bitwise_and(self, stream: bitarray):
+        # TODO: this is the speed bottleneck, improve it!
+        t = time()
         target = self.index
         l = len(stream)
+        #print(time() - t)
+        t = time()
         if target + l <= self.length:
             self.array[target: target + l] &= stream
         else:
             exceeding = (target + l) % self.length
             self.array[target:] &= stream[:-exceeding]
             self.array[:exceeding] &= stream[-exceeding:]
-    
+        #print(time() - t)
+
     def first(self, value: bool)-> int:
         '''
         return the index of the first occurence of value in the array

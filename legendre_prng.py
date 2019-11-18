@@ -112,11 +112,11 @@ def bf_v2(p: int, hint)-> int:
             print("average inner cycle time: " + str(avg_inner_time / counter_sym))
             return c
 
-# bitwise operations on int are significantly faster thano on bitarrays: shall we switch?
+# bitwise operations on int are significantly faster than on bitarrays: shall we switch?
 def bf_v3(p: int, hint)-> int:
     """
     potential improvement: optimize internal data structures and memory access
-    as of now ~2x speedup 
+    as of now ~2x speedup over v2 for proper values of the hint length, approx 1000
     """
     blocklen = len(hint)
     counter_sym = 0
@@ -136,7 +136,6 @@ def bf_v3(p: int, hint)-> int:
         if time() - t > 20:
             t = time()
             print(c)
-        t2 = time()
         candidates.shift(offset)
         for i in range(blocklen):
             to_calc_offset = blocklen - i - 1
@@ -149,11 +148,12 @@ def bf_v3(p: int, hint)-> int:
                 mod = hint[-(i + 1): -(blocklen + 1): -1]
             else:
                 mod = ~hint[-(i + 1): -(blocklen + 1): -1] 
-            candidates.bitwise_and(mod)
             inner_time += time() - t1
+            t2 = time()
+            candidates.bitwise_and(mod)
+            shifts_time += time() - t2
             if not candidates.get(0):
                  break
-        shifts_time += time() - t2
         if candidates.get(0):
             print("total number of symbol calulations = " + str(counter_sym))
             print("inner cycle summed time = " + fmt.format(rd(seconds=inner_time)))
