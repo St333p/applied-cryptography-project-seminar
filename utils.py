@@ -2,6 +2,7 @@ from bitarray import bitarray
 from typing import *
 from time import time
 
+# consider switching away from bitarrays, alternatives: intbitset
 class cyclic_bitarray:
     """
     this offers a x1000 speedup in shifting sequence compared to the 
@@ -43,11 +44,11 @@ class cyclic_bitarray:
         self.set(0, [self.default]*steps)
         self.index = (self.index + steps) % self.length
     
-    def bitwise_and(self, stream: bitarray):
+    def bitwise_and(self, stream: bitarray, l: int):
         # TODO: this is the speed bottleneck, improve it!
         t = time()
         target = self.index
-        l = len(stream)
+        # l = len(stream)
         #print(time() - t)
         t = time()
         if target + l <= self.length:
@@ -56,7 +57,7 @@ class cyclic_bitarray:
             exceeding = (target + l) % self.length
             self.array[target:] &= stream[:-exceeding]
             self.array[:exceeding] &= stream[-exceeding:]
-        #print(time() - t)
+       # print(time() - t)
 
     def first(self, value: bool)-> int:
         '''
