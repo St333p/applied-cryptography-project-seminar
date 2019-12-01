@@ -1,6 +1,7 @@
 from bitarray import bitarray
 from typing import *
 from time import time
+from itertools import repeat
 
 # consider switching away from bitarrays, alternatives: intbitset
 class cyclic_bitarray:
@@ -76,6 +77,9 @@ class cyclic_bitarray:
         #        return i
         #return self.length 
     
+    def any(self, a, b):
+        return self.array[self.index + a: self.index + b].any() 
+
     def __str__(self):
         return 'cyclic_' + str(self.array[self.index:] + self.array[:self.index])
 

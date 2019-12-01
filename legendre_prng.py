@@ -75,7 +75,7 @@ def bf_v2(p: int, hint, start_from=0, confidence_bits=100)-> int:
     t = time()
     c = start_from
     candidates = set(range(c, c + blocklen))
-    print("bruteforcing with version 2...")
+    #print("bruteforcing with version 2...")
     med_len = 0
     avg_inner_time = 0
     while True:
@@ -107,13 +107,13 @@ def bf_v2(p: int, hint, start_from=0, confidence_bits=100)-> int:
             if c not in candidates:
                 break
         if c in candidates:
-            print("total number of symbol calulations = " + str(counter_sym))
-            print("average length of candidates: " + str(med_len / counter_sym))
-            print("average inner cycle time: " + str(avg_inner_time / counter_sym))
+            #print("total number of symbol calulations = " + str(counter_sym))
+            #print("average length of candidates: " + str(med_len / counter_sym))
+            #print("average inner cycle time: " + str(avg_inner_time / counter_sym))
             return c
 
 # bitwise operations on int are significantly faster than on bitarrays: shall we switch?
-def bf_v3(p: int, hint, start_from=0, confidence_bits=100)-> int:
+def bf_v3(p: int, hint, start_from=0, nchunks=1, confidence_bits=100)-> int:
     """
     potential improvement: optimize internal data structures and memory access
     as of now ~2x speedup over v2 for proper values of the hint length, approx 1000
@@ -126,18 +126,19 @@ def bf_v3(p: int, hint, start_from=0, confidence_bits=100)-> int:
     inner_time = 0
     shifts_time = 0
     first_time = 0
-    print("bruteforcing with version 3...")
+    #print("bruteforcing with version 3...")
     while True:
         t1 = time()
         offset = candidates.first(True)
         first_time += time() - t1
         # print("offset " + str(offset))
         c += offset
-        if time() - t > 20:
-            t = time()
-            print(c)
         candidates.shift(offset)
         for i in range(confidence_bits):
+            if time() - t > 2:
+                t = time()
+                step = blocklen // nchunks
+                #print(sum([int(candidates.any(step * i, step * (i + 1))) for i in range(nchunks)]) / nchunks)
             to_calc_offset = blocklen - i - 1
             counter_sym += 1
             symbol = legendre(c + to_calc_offset, p)
@@ -155,9 +156,9 @@ def bf_v3(p: int, hint, start_from=0, confidence_bits=100)-> int:
             if not candidates.get(0):
                  break
         if candidates.get(0):
-            print("total number of symbol calulations = " + str(counter_sym))
-            print("inner cycle summed time = " + fmt.format(rd(seconds=inner_time)))
-            print("large internal cycle summed time = " + fmt.format(rd(seconds=shifts_time)))
+            #print("total number of symbol calulations = " + str(counter_sym))
+            #print("inner cycle summed time = " + fmt.format(rd(seconds=inner_time)))
+            #print("large internal cycle summed time = " + fmt.format(rd(seconds=shifts_time)))
             return c
 
 # TODO: pass bf version as parameter
@@ -171,23 +172,25 @@ def bruteforce(security_bits, stream_length, keyspace_bits=None, key=None, p=Non
         p = randprime(2**security_bits, 2**(security_bits + 1))
     if not key:
         key = randint(p // 2, p)
-    print('key: ' + str(key) + ", p: " + str(p))
+    #print('key: ' + str(key) + ", p: " + str(p))
     start_from = 0
     if keyspace_bits:
         start_from = max(0, key - 2**keyspace_bits)
         print('start_from: ' + str(start_from))
     t = time()
     hint = prng(key, 0, p, stream_length)
-    print("hint derivation time: " + fmt.format(rd(seconds=time()-t)))
+    #print("hint derivation time: " + fmt.format(rd(seconds=time()-t)))
     t = time()
     result = bf_v3(p, hint, start_from)
     assert key == result, "wrong result, please debug"
-    print("bruteforce v3 execution time: " + fmt.format(rd(seconds=time() - t)))
+    t3 = time() - t
+    #print("bruteforce v3 execution time: " + fmt.format(rd(seconds=t3)))
     t = time()
     result = bf_v2(p, hint, start_from)
     assert key == result, "wrong result, please debug"
-    print("bruteforce v2 execution time: " + fmt.format(rd(seconds=time() - t)))
-    return result
+    t2 = time() - t
+    #print("bruteforce v2 execution time: " + fmt.format(rd(seconds=t2)))
+    return t2, t3
 
 if __name__ == "__main__":
     # target prime size ~40 bits, first prize at ~80 bits
