@@ -3,6 +3,10 @@ from typing import *
 from time import time
 from itertools import repeat
 
+setup = "from utils import cyclic_bitarray, bitarray\nfrom random import randint\na = bitarray([randint(0,1) for _ in range(1000000)])\nb = bitarray([randint(0,1) for _ in range(1000000)])\nc = cyclic_bitarray(1000000, random=True)"
+
+a = 10
+
 # consider switching away from bitarrays, alternatives: intbitset
 class cyclic_bitarray:
     """
@@ -45,7 +49,7 @@ class cyclic_bitarray:
         self.set(0, [self.default]*steps)
         self.index = (self.index + steps) % self.length
     
-    def bitwise_and(self, stream: bitarray, l: int):
+    def bitwise_and_v2(self, stream: bitarray, l: int):
         # TODO: this is the speed bottleneck, improve it!
         t = time()
         target = self.index
@@ -59,6 +63,20 @@ class cyclic_bitarray:
             self.array[target:] &= stream[:-exceeding]
             self.array[:exceeding] &= stream[-exceeding:]
        # print(time() - t)
+    
+    def bitwise_and(self, stream: bitarray, l: int):
+        # TODO: this is the speed bottleneck, improve it!
+        t = time()
+        target = self.index
+        # l = len(stream)
+        #print(time() - t)
+        t = time()
+        if target + l <= self.length:
+            s = bitarray(repeat(False,target)) + stream + bitarray(repeat(False, self.length - target - l))
+        else:
+            exceeding = (target + l) % self.length
+            s = stream[-exceeding:] + bitarray(repeat(False, self.length - l)) + stream[:-exceeding]
+        self.array &= s
 
     def first(self, value: bool)-> int:
         '''

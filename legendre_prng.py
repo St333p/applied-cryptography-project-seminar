@@ -176,7 +176,7 @@ def bruteforce(security_bits, stream_length, keyspace_bits=None, key=None, p=Non
     start_from = 0
     if keyspace_bits:
         start_from = max(0, key - 2**keyspace_bits)
-        print('start_from: ' + str(start_from))
+        #print('start_from: ' + str(start_from))
     t = time()
     hint = prng(key, 0, p, stream_length)
     #print("hint derivation time: " + fmt.format(rd(seconds=time()-t)))
@@ -184,12 +184,12 @@ def bruteforce(security_bits, stream_length, keyspace_bits=None, key=None, p=Non
     result = bf_v3(p, hint, start_from)
     assert key == result, "wrong result, please debug"
     t3 = time() - t
-    #print("bruteforce v3 execution time: " + fmt.format(rd(seconds=t3)))
+    print("bruteforce v3 execution time: " + fmt.format(rd(seconds=t3)))
     t = time()
     result = bf_v2(p, hint, start_from)
     assert key == result, "wrong result, please debug"
     t2 = time() - t
-    #print("bruteforce v2 execution time: " + fmt.format(rd(seconds=t2)))
+    print("bruteforce v2 execution time: " + fmt.format(rd(seconds=t2)))
     return t2, t3
 
 if __name__ == "__main__":
