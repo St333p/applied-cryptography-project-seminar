@@ -15,7 +15,7 @@ fmt = '{0.minutes} m, {0.seconds} s'
 def legendre(a: int, p: int) -> int:
     # assert isprime(p) and p > 2, "ERROR: p has to be an odd prime"
     # return legendre_symbol(a, p) == 1
-    return gmpy2.legendre(a,p) == 1
+    return gmpy2.legendre(a,p) == -1
 
 def prng(key: int, seed: int, p: int, length: int) -> bitarray:
     # assert that n is not too large (10 * log2^10(p) ?!?)
@@ -75,7 +75,7 @@ def bf_v2(p: int, hint, start_from=0, confidence_bits=100)-> int:
     t = time()
     c = start_from
     candidates = set(range(c, c + blocklen))
-    #print("bruteforcing with version 2...")
+    print("bruteforcing with version 2...")
     med_len = 0
     avg_inner_time = 0
     while True:
@@ -126,7 +126,7 @@ def bf_v3(p: int, hint, start_from=0, nchunks=1, confidence_bits=100)-> int:
     inner_time = 0
     shifts_time = 0
     first_time = 0
-    #print("bruteforcing with version 3...")
+    print("bruteforcing with version 3...")
     while True:
         t1 = time()
         offset = candidates.first(True)
@@ -134,11 +134,10 @@ def bf_v3(p: int, hint, start_from=0, nchunks=1, confidence_bits=100)-> int:
         # print("offset " + str(offset))
         c += offset
         candidates.shift(offset)
+        if time() - t > 20:
+            t = time()
+            print(c)
         for i in range(confidence_bits):
-            if time() - t > 2:
-                t = time()
-                step = blocklen // nchunks
-                #print(sum([int(candidates.any(step * i, step * (i + 1))) for i in range(nchunks)]) / nchunks)
             to_calc_offset = blocklen - i - 1
             counter_sym += 1
             symbol = legendre(c + to_calc_offset, p)

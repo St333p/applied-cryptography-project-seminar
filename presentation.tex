@@ -1,0 +1,217 @@
+\documentclass{beamer}
+% general info
+\author{Pellegrini Stefano}
+\title{\LARGE Bruteforce of a Legendre-based prng}
+\date{13/12/19}
+% package imports 
+\usepackage{textpos} 
+\usepackage{tikz,calc, svg}
+\usepackage{listings}
+\usepackage{amsthm, amsmath}
+% edit beamer theme
+\definecolor{green}{RGB}{34,83,50}
+\definecolor{White}{RGB}{255,255,255}
+\usetheme{boxes}
+\setbeamercolor{structure}{fg=green}
+\setbeamercolor{frametitle}{bg=green, fg=White}
+% theorem environments
+\newtheorem{thm}{Theorem}
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition}
+\newtheorem{ex}[thm]{Example}
+\theoremstyle{remark}
+\newtheorem{nt}[thm]{Note}
+% custom commands
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\renewcommand{\L}{\mathcal{L}}
+\renewcommand{\S}{\mathcal{S}}
+\newcommand{\C}{\mathcal{C}}
+\renewcommand{\O}{\mathcal{O}}
+
+\begin{document}
+\maketitle
+\begin{frame}{Setting: PRFs}
+A \textbf{Pseudo-random function (PRF)} is an \textit{efficient} emulator of a \textit{random oracle}.
+\only<2->{
+    \medskip
+    \begin{itemize}
+    \item The output of a PRF is computationally indistinguishable from random
+    \begin{itemize}
+    \item regardless of how the input was chosen
+    \end{itemize}
+    \only<3>{
+        \medskip
+        \item Used as building block for more complex cryptographic algorithms, such as:
+        \begin{itemize}
+        \item Secure encryption schemes
+        \item Dynamic perfect hashing
+        \item Deterministic, memoryless authentication schemes
+        \end{itemize}
+    }
+    \end{itemize}
+}
+\end{frame}
+
+\begin{frame}{Setting: MPC-friendly PRFs}
+In some settings it's useful to compute PRFs in a multiparty way, so we would want:
+\bigskip
+\begin{itemize}
+\item Few communication rounds \; $\Rightarrow$ \; \textit{low latency}
+\item Long output \; $\Rightarrow$ \; \textit{high throughput}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Legendre symbol PRF}
+Ivan Bjerre Damg\aa rd proposed a solution at CRYPTO88:
+\begin{center}\textit{``On the randomness of Legendre and Jacobi sequences''}\end{center}
+\medskip
+\begin{itemize}
+\item Their distributions were well studied since before 1900
+\item First cryptographic usage proposal
+\end{itemize}
+\only<2>{
+    \medskip
+    New candidate computationally hard problem
+    \begin{itemize}
+    \item Looks unrelated to classical hard tasks \\
+    (RSA, DH, factorization, lattices, \ldots)
+    \end{itemize}
+}
+\end{frame}
+
+\begin{frame}{A bit of number-theoretic context (1/2)}
+\begin{defn}[Legendre symbol]
+Let $p$ be a $n$-bit prime and $a \in \Z_p^*$.
+\only<3->{
+    The Legendre symbol is defined in the following way:
+    \only<3>{
+        \[\left(\frac{a}{p}\right):=\begin{cases} 1 & a=b^2\mod{p}\; \text{ for some } b \in \Z_p^* \\
+        -1 & \text{otherwise}\end{cases}\]
+        For convenience $\left(\frac{0}{p}\right):=1$
+    }
+    \only<4>{
+        \[\left(\frac{a}{p}\right)\mapsto \L_p(k):=\begin{cases} 0 & a=b^2\mod{p}\; \text{ for some } b \in \Z_p^* \\
+            1 & \text{otherwise}\end{cases}\]
+    }        
+}
+\end{defn}
+\only<2>{
+    \bigskip
+    \begin{nt}
+    Remember that
+     \[\Z_p^*=\{x \in\{0,\ldots,p-1\} | \gcd(x,p)=1\}=\{1,\ldots,p-1\}\] 
+     is the multiplicative group modulo $p$
+    \end{nt}
+}
+\end{frame}
+
+\begin{frame}{A bit of number-theoretic context (2/2)}
+It follows from the Weil bound (proven by Andr\'e  Weil in 1948) that:
+\bigskip
+\begin{thm}
+\only<1>{
+    The number of occurrences of a fixed pattern of $l$ nonzero Legendre symbols among the integers $1,2,\ldots,p-1\pmod{p}$ is:
+    \[\frac{p}{2^l}+\mathcal{O}(\sqrt{p}),\text{ as } p\to\infty\]
+}
+\only<2>{
+    The distribution of fixed length substrings of Legendre symbols converges to the uniform distribution.
+}
+\end{thm}
+\end{frame}
+\begin{frame}{Legendre sequence (1/2)}
+We can finally define a PRF:
+\bigskip
+\begin{defn}
+Let $p$ be a $n$-bit prime, $k \in_R \Z_p^*$ and $l\in\N$.\\
+The Legendre sequence is:
+\[\S(k,l) := \L_p(k), \L_p(k+1), \ldots,\L_p(k+l-1)\in \{0,1\}^l\]
+\end{defn}
+\end{frame}
+\begin{frame}{Legendre sequence (2/2)}
+\begin{itemize}
+\item Damg\aa rd conjectured additional pseudo-randomness properties of this sequence in his proposal to CRYPTO88:
+\medskip
+\item Renewed interest in this topic arose with a 2016 paper by L. Grassi et al.: \textit{``MPC-Friendly Symmetric Key Primitives''}
+\medskip
+\item Attention of the \textit{ethereum} community for \textbf{proof-of-custody}.
+\begin{itemize}
+\item Ethereum 2.0: based on proof of stake
+\item Prizes for effective attacks
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}{Ethereum bounties}
+The Ethereum community offers monetary rewards for:
+\begin{itemize}
+\only<1>{
+    \item Subexponential key recovery algorithm or security proof;
+    \item Improvement on Khovratovich key recovery attack;
+    \item One research paper regarding Legendre PRF;
+}
+\item Breaking computational hardness assumptions.
+\end{itemize}
+\only<2>{
+    \bigskip
+    \includegraphics[width=\textwidth, keepaspectratio]{figs/bounty}
+}
+\end{frame}
+\begin{frame}{The problem}
+Given a fixed-size Legendre PRF output 
+\[\S(k,l) := \L_p(k), \L_p(k+1), \ldots,\L_p(k+l-1)\]
+find the key $k$.
+\end{frame}
+\begin{frame}{My approach (1/2)}
+An optimized (as much as possible) bruteforce attack:
+\bigskip
+\begin{itemize}
+\item Minimize the number of Legendre symbol calculations
+\item No asymptotic complexity improvement, just constant
+\item Optimization of the deriving overload
+\end{itemize}
+\end{frame}
+\begin{frame}{My approach (2/2)}
+An optimized (as much as possible) bruteforce attack:
+\bigskip
+\begin{itemize}
+\item Considering candidate key $c$, for a $l$-long hint:
+\begin{itemize}
+    \item Calculate $\L_p(c+l)$;
+    \item Remove the incompatible candidates from $(c, \ldots, c+l)$;
+    \item Calculate symbols backwards till $c$ also gets excluded:
+    \begin{itemize}
+        \item While keeping track of the set of candidates $\C$;
+    \end{itemize}
+    \item $c\leftarrow \min \C$
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Obtained results: best}
+\begin{itemize}
+\item keyspace of size \texttt{32-bits}
+\item $p$ of size \texttt{80-bits}
+\item hint of size \texttt{1000-bits}
+\end{itemize} 
+\end{frame}
+\begin{frame}{Obtained results: keyspace size}
+\includesvg[width=\textwidth]{figs/inc-keyspace-time}
+\end{frame}
+\begin{frame}{Obtained results: hint length}
+\includesvg[width=\textwidth]{figs/inc-hint_bitlength-time}
+\end{frame}
+\begin{frame}{Obtained results: prime size in bits}
+\includesvg[width=\textwidth]{figs/inc-log_2(p)-time}
+\end{frame}
+\begin{frame}{Further improvement: algorithmic}
+With prime $p$, uniformly distributed key, with $M$ PRF queries needed:
+\bigskip
+\begin{itemize}
+\item Khovratovich key recovery attack runs in $\O(p\frac{\log(M)}{M})$
+\medskip
+\item Ward Beullens claimed the bounty with $\O(p\frac{\log^2(p)}{M}), M<p^\frac14$
+\end{itemize}
+\end{frame}
+
+
+\end{document}
