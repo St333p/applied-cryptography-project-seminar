@@ -192,26 +192,36 @@ An optimized (as much as possible) bruteforce attack:
 \item keyspace of size \texttt{32-bits}
 \item $p$ of size \texttt{80-bits}
 \item hint of size \texttt{1000-bits}
+\item execution time \ $\approx12$ min.
 \end{itemize} 
 \end{frame}
 \begin{frame}{Obtained results: keyspace size}
 \includesvg[width=\textwidth]{figs/inc-keyspace-time}
 \end{frame}
 \begin{frame}{Obtained results: hint length}
-\includesvg[width=\textwidth]{figs/inc-hint_bitlength-time}
+\includesvg[width=\textwidth]{figs/inc-hintbitlength-time}
 \end{frame}
 \begin{frame}{Obtained results: prime size in bits}
 \includesvg[width=\textwidth]{figs/inc-log_2(p)-time}
 \end{frame}
 \begin{frame}{Further improvement: algorithmic}
-With prime $p$, uniformly distributed key, with $M$ PRF queries needed:
+With prime $p$, uniformly distributed key, when $M$ queries are needed:
 \bigskip
 \begin{itemize}
 \item Khovratovich key recovery attack runs in $\O(p\frac{\log(M)}{M})$
 \medskip
-\item Ward Beullens claimed the bounty with $\O(p\frac{\log^2(p)}{M}), M<p^\frac14$
+\item Ward Beullens claimed the bounty with $\O(p\frac{\log^2(p)}{M}), M\le p^\frac14$
 \end{itemize}
 \end{frame}
-
+\begin{frame}{Further improvement: software}
+\begin{itemize}
+\item Rewrite some parts of the code in C with focus on performance
+\medskip
+\item Optimize data structures, e.g. alignment of memory
+\end{itemize}
+\end{frame}
+\begin{frame}{The end}
+\begin{center} \LARGE Questions? \end{center}
+\end{frame}
 
 \end{document}

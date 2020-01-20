@@ -110,7 +110,7 @@ def bf_v2(p: int, hint, start_from=0, confidence_bits=100)-> int:
             #print("total number of symbol calulations = " + str(counter_sym))
             #print("average length of candidates: " + str(med_len / counter_sym))
             #print("average inner cycle time: " + str(avg_inner_time / counter_sym))
-            return c
+            return {"key": c, "symbols": counter_sym}
 
 # bitwise operations on int are significantly faster than on bitarrays: shall we switch?
 def bf_v3(p: int, hint, start_from=0, nchunks=1, confidence_bits=100)-> int:
@@ -155,10 +155,10 @@ def bf_v3(p: int, hint, start_from=0, nchunks=1, confidence_bits=100)-> int:
             if not candidates.get(0):
                  break
         if candidates.get(0):
-            #print("total number of symbol calulations = " + str(counter_sym))
+            print("total number of symbol calulations = " + str(counter_sym))
             #print("inner cycle summed time = " + fmt.format(rd(seconds=inner_time)))
             #print("large internal cycle summed time = " + fmt.format(rd(seconds=shifts_time)))
-            return c
+            return {"key": c, "symbols": counter_sym}
 
 # TODO: pass bf version as parameter
 def bruteforce(security_bits, stream_length, keyspace_bits=None, key=None, p=None):
@@ -171,7 +171,7 @@ def bruteforce(security_bits, stream_length, keyspace_bits=None, key=None, p=Non
         p = randprime(2**security_bits, 2**(security_bits + 1))
     if not key:
         key = randint(p // 2, p)
-    #print('key: ' + str(key) + ", p: " + str(p))
+    print('key: ' + str(key) + ", p: " + str(p))
     start_from = 0
     if keyspace_bits:
         start_from = max(0, key - 2**keyspace_bits)
@@ -180,16 +180,16 @@ def bruteforce(security_bits, stream_length, keyspace_bits=None, key=None, p=Non
     hint = prng(key, 0, p, stream_length)
     #print("hint derivation time: " + fmt.format(rd(seconds=time()-t)))
     t = time()
-    result = bf_v3(p, hint, start_from)
-    assert key == result, "wrong result, please debug"
+    result_v3 = bf_v3(p, hint, start_from)
+    assert key == result_v3["key"], "wrong result, please debug"
     t3 = time() - t
     print("bruteforce v3 execution time: " + fmt.format(rd(seconds=t3)))
     t = time()
-    result = bf_v2(p, hint, start_from)
-    assert key == result, "wrong result, please debug"
+    result_v2 = bf_v2(p, hint, start_from)
+    assert key == result_v2["key"], "wrong result, please debug"
     t2 = time() - t
-    print("bruteforce v2 execution time: " + fmt.format(rd(seconds=t2)))
-    return t2, t3
+    #print("bruteforce v2 execution time: " + fmt.format(rd(seconds=t2)))
+    return (t2, t3), (result_v2["symbols"], result_v3["symbols"])
 
 if __name__ == "__main__":
     # target prime size ~40 bits, first prize at ~80 bits
@@ -198,10 +198,10 @@ if __name__ == "__main__":
             help='bitlength of the prime number and the key')
     parser.add_argument('stream_length', type=int,
             help='bitlength of the stream passed as hint for the bruteforce')
-    parser.add_argument('keyspace_bits', type=int,
-            help='bitlength of the keyspace to search from')
+    #parser.add_argument('keyspace_bits', type=int,
+    #        help='bitlength of the keyspace to search from')
     args = parser.parse_args()
     #could try to build up a test case to try and use
-    bruteforce(args.security_bits, args.stream_length, args.keyspace_bits)
+    bruteforce(args.security_bits, args.stream_length, args.security_bits)
 
 
